@@ -42,7 +42,16 @@ Install semua package yang diperlukan:
 npm install
 ```
 
-### 4. Menjalankan Aplikasi 
+### 4. Setting .env
+
+Ganti .env.example menjadi .env
+
+```bash
+copas aja yg aku kasih
+```
+
+
+### 5. Menjalankan Aplikasi 
 
 Compile dan jalankan aplikasi dengan hot-reload untuk development:
 
