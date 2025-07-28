@@ -12,7 +12,9 @@ router.get('/auto-athlete', athleteController.searchAthleteByFirstName);
 router.get('/total', athleteController.getDataByPeriod);
 // Get data athlete by period
 router.get('/total-athlete', athleteController.getDataAthleteByPeriod);
-
-
+// Get available periods
+router.get('/available-periods', athleteController.getAvailablePeriods);
+// Get summary statistics by period (monthly / semesterly)
+router.get('/summary-stats', athleteController.getSummaryStats);
 
 module.exports = router;
