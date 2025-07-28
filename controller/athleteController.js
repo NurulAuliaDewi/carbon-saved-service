@@ -550,19 +550,20 @@ module.exports.getSummaryStats = async (req, res) => {
         const freqResult = await db.query(freqQuery, params);
 
         let frequencyStats = {
-            "less_than_3_days": 0,
-            "3_days": 0,
+            "1_day": 0,
+            "2_to_3_days": 0,
             "4_to_6_days": 0,
             "every_day": 0
         };
 
         freqResult.rows.forEach(row => {
             const ridesPerWeek = row.total_rides / row.total_weeks;
-            if (ridesPerWeek < 3) frequencyStats.less_than_3_days++;
-            else if (ridesPerWeek === 3) frequencyStats["3_days"]++;
+            if (ridesPerWeek >= 0.9 && ridesPerWeek <= 1.1) frequencyStats["1_day"]++;
+            else if (ridesPerWeek > 1.1 && ridesPerWeek <= 3.5) frequencyStats["2_to_3_days"]++;
             else if (ridesPerWeek >= 4 && ridesPerWeek < 7) frequencyStats["4_to_6_days"]++;
-            else frequencyStats.every_day++;
+            else frequencyStats["every_day"]++;
         });
+        
 
         res.status(200).json({
             status: 200,
