@@ -48,7 +48,7 @@ module.exports.getDataByPeriod = async (req, res) => {
                         SUM(carbon_saving) as total_carbon_saving,
                         COUNT(*) as total_activity
                     FROM club_activities 
-                    WHERE DATE(datetime) = $1
+                    WHERE datetime::date = $1::date
                 `;
                 queryParams = [date];
             } else {
@@ -59,7 +59,7 @@ module.exports.getDataByPeriod = async (req, res) => {
                         SUM(carbon_saving) as total_carbon_saving,
                         COUNT(*) as total_activity
                     FROM club_activities 
-                    WHERE DATE(datetime) = CURRENT_DATE
+                    WHERE DATE(datetime AT TIME ZONE 'Asia/Jakarta') = CURRENT_DATE
                 `;
             }
         } else if (period === 'month') {
@@ -83,8 +83,10 @@ module.exports.getDataByPeriod = async (req, res) => {
                         SUM(carbon_saving) as total_carbon_saving,
                         COUNT(*) as total_activity
                     FROM club_activities 
-                    WHERE EXTRACT(MONTH FROM datetime) = EXTRACT(MONTH FROM CURRENT_DATE)
-                    AND EXTRACT(YEAR FROM datetime) = EXTRACT(YEAR FROM CURRENT_DATE)
+                    WHERE EXTRACT(MONTH FROM datetime) = 
+                        EXTRACT(MONTH FROM CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Jakarta')
+                    AND EXTRACT(YEAR FROM datetime) = 
+                        EXTRACT(YEAR FROM CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Jakarta')
                 `;
             }
         } else if (period === 'year') {
@@ -107,7 +109,8 @@ module.exports.getDataByPeriod = async (req, res) => {
                         SUM(carbon_saving) as total_carbon_saving,
                         COUNT(*) as total_activity
                     FROM club_activities 
-                    WHERE EXTRACT(YEAR FROM datetime) = EXTRACT(YEAR FROM CURRENT_DATE)
+                    WHERE EXTRACT(YEAR FROM datetime) = 
+                        EXTRACT(YEAR FROM CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Jakarta')
                 `;
             }
         }
@@ -133,7 +136,6 @@ module.exports.getDataByPeriod = async (req, res) => {
         });
     }
 };
-
 module.exports.getDataAthleteByPeriod = async (req, res) => {
     const { period, month, year, date } = req.query;
     
@@ -164,14 +166,15 @@ module.exports.getDataAthleteByPeriod = async (req, res) => {
         if (period === 'day') {
             if (date) {
                 sqlQuery = baseQuery + `
-                    WHERE DATE(datetime) = $1
+                    WHERE datetime::date = $1::date
                     GROUP BY id_athlete, athlete_firstname, athlete_lastname
                     ORDER BY total_carbon_saving DESC
                 `;
                 queryParams = [date];
             } else {
+                // Gunakan solusi timezone yang sama seperti sebelumnya
                 sqlQuery = baseQuery + `
-                    WHERE DATE(datetime) = CURRENT_DATE
+                    WHERE DATE(datetime AT TIME ZONE 'Asia/Jakarta') = CURRENT_DATE
                     GROUP BY id_athlete, athlete_firstname, athlete_lastname
                     ORDER BY total_carbon_saving DESC
                 `;
@@ -187,8 +190,10 @@ module.exports.getDataAthleteByPeriod = async (req, res) => {
                 queryParams = [month, year];
             } else {
                 sqlQuery = baseQuery + `
-                    WHERE EXTRACT(MONTH FROM datetime) = EXTRACT(MONTH FROM CURRENT_DATE)
-                    AND EXTRACT(YEAR FROM datetime) = EXTRACT(YEAR FROM CURRENT_DATE)
+                    WHERE EXTRACT(MONTH FROM datetime) = 
+                        EXTRACT(MONTH FROM CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Jakarta')
+                    AND EXTRACT(YEAR FROM datetime) = 
+                        EXTRACT(YEAR FROM CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Jakarta')
                     GROUP BY id_athlete, athlete_firstname, athlete_lastname
                     ORDER BY total_carbon_saving DESC
                 `;
@@ -203,7 +208,8 @@ module.exports.getDataAthleteByPeriod = async (req, res) => {
                 queryParams = [year];
             } else {
                 sqlQuery = baseQuery + `
-                    WHERE EXTRACT(YEAR FROM datetime) = EXTRACT(YEAR FROM CURRENT_DATE)
+                    WHERE EXTRACT(YEAR FROM datetime) = 
+                        EXTRACT(YEAR FROM CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Jakarta')
                     GROUP BY id_athlete, athlete_firstname, athlete_lastname
                     ORDER BY total_carbon_saving DESC
                 `;
@@ -231,7 +237,6 @@ module.exports.getDataAthleteByPeriod = async (req, res) => {
         });
     }
 };
-
 module.exports.getAvailablePeriods = async (req, res) => {
     try {
         const monthsQuery = `
@@ -316,10 +321,19 @@ module.exports.getAthleteById = async (req, res) => {
 
             if (period === 'day') {
                 if (date) {
-                    sqlQuery = baseQuery + ` AND DATE(datetime) = $2 ORDER BY datetime DESC`;
+                    // Jika ada parameter date, gunakan date tersebut
+                    sqlQuery = baseQuery + ` 
+                        AND datetime::date = $2::date 
+                        ORDER BY datetime DESC
+                    `;
                     queryParams.push(date);
                 } else {
-                    sqlQuery = baseQuery + ` AND DATE(datetime) = CURRENT_DATE ORDER BY datetime DESC`;
+                    // Karena datetime tersimpan dengan timezone +07, 
+                    // kita perlu mengkonversi ke Jakarta timezone untuk perbandingan
+                    sqlQuery = baseQuery + ` 
+                        AND DATE(datetime AT TIME ZONE 'Asia/Jakarta') = CURRENT_DATE
+                        ORDER BY datetime DESC
+                    `;
                 }
             } else if (period === 'month') {
                 if (month && year) {
@@ -331,8 +345,10 @@ module.exports.getAthleteById = async (req, res) => {
                     queryParams.push(month, year);
                 } else {
                     sqlQuery = baseQuery + ` 
-                        AND EXTRACT(MONTH FROM datetime) = EXTRACT(MONTH FROM CURRENT_DATE)
-                        AND EXTRACT(YEAR FROM datetime) = EXTRACT(YEAR FROM CURRENT_DATE)
+                        AND EXTRACT(MONTH FROM datetime) = 
+                            EXTRACT(MONTH FROM CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Jakarta')
+                        AND EXTRACT(YEAR FROM datetime) = 
+                            EXTRACT(YEAR FROM CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Jakarta')
                         ORDER BY datetime DESC
                     `;
                 }
@@ -345,7 +361,8 @@ module.exports.getAthleteById = async (req, res) => {
                     queryParams.push(year);
                 } else {
                     sqlQuery = baseQuery + ` 
-                        AND EXTRACT(YEAR FROM datetime) = EXTRACT(YEAR FROM CURRENT_DATE)
+                        AND EXTRACT(YEAR FROM datetime) = 
+                            EXTRACT(YEAR FROM CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Jakarta')
                         ORDER BY datetime DESC
                     `;
                 }
@@ -430,10 +447,16 @@ module.exports.getAthleteByIdWithPeriod = async (req, res) => {
 
         if (period === 'day') {
             if (date) {
-                sqlQuery = baseQuery + ` AND DATE(datetime) = $2 ORDER BY datetime DESC`;
+                sqlQuery = baseQuery + ` 
+                    AND datetime::date = $2::date 
+                    ORDER BY datetime DESC
+                `;
                 queryParams.push(date);
             } else {
-                sqlQuery = baseQuery + ` AND DATE(datetime) = CURRENT_DATE ORDER BY datetime DESC`;
+                sqlQuery = baseQuery + ` 
+                    AND DATE(datetime AT TIME ZONE 'Asia/Jakarta') = CURRENT_DATE
+                    ORDER BY datetime DESC
+                `;
             }
         } else if (period === 'month') {
             if (month && year) {
@@ -445,8 +468,10 @@ module.exports.getAthleteByIdWithPeriod = async (req, res) => {
                 queryParams.push(month, year);
             } else {
                 sqlQuery = baseQuery + ` 
-                    AND EXTRACT(MONTH FROM datetime) = EXTRACT(MONTH FROM CURRENT_DATE)
-                    AND EXTRACT(YEAR FROM datetime) = EXTRACT(YEAR FROM CURRENT_DATE)
+                    AND EXTRACT(MONTH FROM datetime) = 
+                        EXTRACT(MONTH FROM CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Jakarta')
+                    AND EXTRACT(YEAR FROM datetime) = 
+                        EXTRACT(YEAR FROM CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Jakarta')
                     ORDER BY datetime DESC
                 `;
             }
@@ -459,7 +484,8 @@ module.exports.getAthleteByIdWithPeriod = async (req, res) => {
                 queryParams.push(year);
             } else {
                 sqlQuery = baseQuery + ` 
-                    AND EXTRACT(YEAR FROM datetime) = EXTRACT(YEAR FROM CURRENT_DATE)
+                    AND EXTRACT(YEAR FROM datetime) = 
+                        EXTRACT(YEAR FROM CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Jakarta')
                     ORDER BY datetime DESC
                 `;
             }
@@ -495,7 +521,6 @@ module.exports.getAthleteByIdWithPeriod = async (req, res) => {
         });
     }
 };
-
 module.exports.searchAthleteByFirstName = async (req, res) => {
     const { term } = req.query;
 
