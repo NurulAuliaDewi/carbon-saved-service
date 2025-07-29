@@ -534,12 +534,16 @@ module.exports.getSummaryStats = async (req, res) => {
             const semesterMonths = semester === '1' ? [1, 2, 3, 4, 5, 6] : [7, 8, 9, 10, 11, 12];
             whereClause = `WHERE EXTRACT(MONTH FROM datetime) = ANY($1) AND EXTRACT(YEAR FROM datetime) = $2`;
             params = [semesterMonths, year];
+        } else if (period === 'year' && year) {
+            whereClause = `WHERE EXTRACT(YEAR FROM datetime) = $1`;
+            params = [year];
         }
 
         const fullQuery = `${query} ${whereClause}`;
         const result = await db.query(fullQuery, params);
+        
         const freqQuery = `
-            SELECT
+            SELECT 
                 id_athlete,
                 COUNT(DISTINCT DATE_TRUNC('week', datetime)) AS total_weeks,
                 COUNT(*) AS total_rides
@@ -563,8 +567,7 @@ module.exports.getSummaryStats = async (req, res) => {
             else if (ridesPerWeek >= 4 && ridesPerWeek < 7) frequencyStats["4_to_6_days"]++;
             else frequencyStats["every_day"]++;
         });
-        
-
+                
         res.status(200).json({
             status: 200,
             message: 'Success get summary statistics',
