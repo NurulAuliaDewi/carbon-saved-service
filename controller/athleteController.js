@@ -611,3 +611,76 @@ module.exports.getSummaryStats = async (req, res) => {
         });
     }
 };
+
+module.exports.getMonthlyActivityFrequency = async (req, res) => {
+    const { month, year } = req.query;
+
+    // if (!month || !year) {
+    //     return res.status(400).json({
+    //         status: 400,
+    //         message: 'month and year are required'
+    //     });
+    // }
+
+    try {
+        const athleteQuery = `
+            SELECT 
+                id_athlete,
+                athlete_firstname,
+                athlete_lastname,
+                COUNT(DISTINCT DATE_TRUNC('day', datetime)) AS active_days,
+                SUM(distance) AS total_distance
+            FROM club_activities
+            WHERE 
+                EXTRACT(MONTH FROM datetime) = $1
+                AND EXTRACT(YEAR FROM datetime) = $2
+                AND EXTRACT(DOW FROM datetime) BETWEEN 1 AND 5
+            GROUP BY id_athlete, athlete_firstname, athlete_lastname
+            ORDER BY active_days DESC, total_distance DESC
+        `;
+
+        const freqQuery = `
+            WITH athlete_days AS (
+                SELECT 
+                    id_athlete,
+                    COUNT(DISTINCT DATE_TRUNC('day', datetime)) AS active_days
+                FROM club_activities
+                WHERE 
+                    EXTRACT(MONTH FROM datetime) = $1
+                    AND EXTRACT(YEAR FROM datetime) = $2
+                    AND EXTRACT(DOW FROM datetime) BETWEEN 1 AND 5
+                GROUP BY id_athlete
+            )
+            SELECT
+                COUNT(CASE WHEN active_days BETWEEN 1 AND 4 THEN 1 END) AS "1_to_4_days",
+                COUNT(CASE WHEN active_days BETWEEN 5 AND 9 THEN 1 END) AS "5_to_9_days",
+                COUNT(CASE WHEN active_days BETWEEN 10 AND 14 THEN 1 END) AS "10_to_14_days",
+                COUNT(CASE WHEN active_days BETWEEN 15 AND 19 THEN 1 END) AS "15_to_19_days",
+                COUNT(CASE WHEN active_days >= 20 THEN 1 END) AS "20_plus_days"
+            FROM athlete_days
+        `;
+
+        const [athleteResult, freqResult] = await Promise.all([
+            db.query(athleteQuery, [month, year]),
+            db.query(freqQuery, [month, year])
+        ]);
+
+        res.status(200).json({
+            status: 200,
+            message: 'Success get monthly activity frequency',
+            data: {
+                athletes: athleteResult.rows,
+                frequency_distribution: freqResult.rows[0]
+            },
+            filters: { month, year }
+        });
+
+    } catch (err) {
+        console.error('Error:', err);
+        res.status(500).json({
+            status: 500,
+            message: 'Server error',
+            error: err.message
+        });
+    }
+};

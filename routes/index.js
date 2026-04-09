@@ -16,5 +16,6 @@ router.get('/total-athlete', athleteController.getDataAthleteByPeriod);
 router.get('/available-periods', athleteController.getAvailablePeriods);
 // Get summary statistics by period (monthly / semesterly)
 router.get('/summary-stats', athleteController.getSummaryStats);
+router.get('/monthly-activity-frequency', athleteController.getMonthlyActivityFrequency);
 
 module.exports = router;
